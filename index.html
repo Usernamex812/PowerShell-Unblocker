@@ -1,1 +1,192 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PowerShell Unblock Command Generator</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      min-height: 100vh;
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: Arial, sans-serif;
+    }
+    main {
+      max-width: 700px;
+      margin: 40px auto;
+      padding: 28px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 16px;
+    }
+    h1 { margin-top: 0; font-size: 26px; }
+    p { color: #9da7b3; line-height: 1.5; }
+    label {
+      display: block;
+      margin: 20px 0 8px;
+      font-weight: bold;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      background: #0d1117;
+      color: #e6edf3;
+      font-size: 15px;
+    }
+    .file-picker {
+      display: block;
+      margin-top: 12px;
+      color: #9da7b3;
+      font-size: 14px;
+    }
+    .option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 20px;
+      padding: 14px;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .option input {
+      width: 18px;
+      height: 18px;
+      accent-color: #2f81f7;
+    }
+    .option label {
+      margin: 0;
+      cursor: pointer;
+    }
+    pre {
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+      padding: 16px;
+      background: #010409;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: #7ee787;
+      min-height: 60px;
+      line-height: 1.5;
+    }
+    .buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+    button {
+      padding: 12px 18px;
+      border: 0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .primary { background: #238636; color: white; }
+    .secondary { background: #30363d; color: white; }
+    button:hover { filter: brightness(1.15); }
+    .note {
+      margin-top: 20px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Unblock-File Command Generator</h1>
+    <p>Select a file or enter its full Windows path to generate a PowerShell command.</p>
+    <label for="path">Full file or folder path</label>
+    <input
+      id="path"
+      type="text"
+      placeholder="C:\Users\Evan\Downloads\mod.dll"
+      autocomplete="off"
+    >
+    <input
+      id="picker"
+      class="file-picker"
+      type="file"
+      multiple
+    >
+    <div class="option">
+      <input id="recurse" type="checkbox">
+      <label for="recurse">Recurse — include files in all subfolders</label>
+    </div>
+    <label for="command">Generated PowerShell command</label>
+    <pre id="command">Unblock-File -LiteralPath 'C:\path\to\file.dll'</pre>
+    <div class="buttons">
+      <button class="primary" id="copy">Copy command</button>
+      <button class="secondary" id="clear">Clear</button>
+    </div>
+    <p class="note">
+      Note: A website cannot read the actual Windows path from the file picker.
+      Enter the full path manually. With Recurse enabled, enter the folder path.
+      Review the command before running it in PowerShell.
+    </p>
+  </main>
+  <script>
+    const pathInput = document.getElementById("path");
+    const recurseInput = document.getElementById("recurse");
+    const commandOutput = document.getElementById("command");
+    const picker = document.getElementById("picker");
+    function quotePath(path) {
+      return "'" + path.replace(/'/g, "''") + "'";
+    }
+    function updateCommand() {
+      const path = pathInput.value.trim();
+      if (!path) {
+        commandOutput.textContent = "Enter a full Windows path.";
+        return;
+      }
+      const quotedPath = quotePath(path);
+      if (recurseInput.checked) {
+        commandOutput.textContent =
+          "Get-ChildItem -LiteralPath " + quotedPath +
+          " -Recurse -File | Unblock-File";
+      } else {
+        commandOutput.textContent =
+          "Unblock-File -LiteralPath " + quotedPath;
+      }
+    }
+    pathInput.addEventListener("input", updateCommand);
+    recurseInput.addEventListener("change", updateCommand);
+    picker.addEventListener("change", () => {
+      const files = picker.files;
+      if (!files.length) return;
+      if (recurseInput.checked) {
+        commandOutput.textContent =
+          "For recursive unblocking, enter the full folder path above.";
+      } else {
+        pathInput.value = files[0].name;
+        updateCommand();
+      }
+    });
+    document.getElementById("copy").addEventListener("click", async () => {
+      const command = commandOutput.textContent;
+      if (!command || command.includes("Enter a full")) return;
+      try {
+        await navigator.clipboard.writeText(command);
+        document.getElementById("copy").textContent = "Copied!";
+        setTimeout(() => {
+          document.getElementById("copy").textContent = "Copy command";
+        }, 1500);
+      } catch {
+        alert("Copy failed. Select and copy the command manually.");
+      }
+    });
+    document.getElementById("clear").addEventListener("click", () => {
+      pathInput.value = "";
+      picker.value = "";
+      recurseInput.checked = false;
+      updateCommand();
+    });
+    updateCommand();
+  </script>
+</body>
+</html>
